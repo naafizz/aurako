@@ -1,8 +1,9 @@
 "use client";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const params = useSearchParams();
   const id = params.get("id");
 
@@ -18,5 +19,13 @@ export default function OrderSuccessPage() {
         আরও শপিং করুন →
       </Link>
     </div>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-xl px-5 py-20 text-center text-ink-soft">লোড হচ্ছে...</div>}>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
