@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>চেকআউট — Aurako Business</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hind+Siliguri:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF3EE; --surface:#FFFFFF; --surface-soft:#FBF6F3;
+    --ink:#2A1B1E; --ink-soft:#8A7370; --ink-faint:#B9A8A4;
+    --plum:#6E2A3B; --plum-dark:#501F2C; --gold:#B8862E; --gold-soft:#F2E4C7;
+    --green:#3F7D58; --green-soft:#E7F1EA; --red:#B23A48; --red-soft:#FBEAEC;
+    --line:#EADFDA; --radius:14px;
+    --shadow: 0 1px 2px rgba(42,27,30,0.04), 0 8px 24px -12px rgba(42,27,30,0.12);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Hind Siliguri',sans-serif;}
+  header{padding:18px 28px; background:var(--surface); border-bottom:1px solid var(--line);}
+  .brand{font-family:'Fraunces',serif; font-weight:700; font-size:24px; color:var(--plum-dark);}
+  main{max-width:640px; margin:0 auto; padding:28px;}
+  h1{font-family:'Fraunces',serif; font-size:22px; margin:0 0 20px;}
+  .card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; margin-bottom:18px;}
+  label{display:block; font-size:13.5px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;}
+  input, textarea{
+    width:100%; padding:11px 13px; border-radius:9px; border:1px solid var(--line);
+    font-family:'Hind Siliguri',sans-serif; font-size:14.5px; margin-bottom:16px; background:var(--surface-soft);
+  }
+  textarea{resize:vertical; min-height:70px;}
+  .pay-options{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
+  .pay-opt{
+    flex:1; min-width:110px; border:1.5px solid var(--line); border-radius:10px; padding:12px; text-align:center;
+    cursor:pointer; font-weight:600; font-size:14px;
+  }
+  .pay-opt.active{border-color:var(--plum); background:var(--gold-soft); color:var(--plum-dark);}
+  .txn-box{background:var(--gold-soft); border-radius:10px; padding:14px; margin-bottom:16px; font-size:13.5px; display:none;}
+  .txn-box.show{display:block;}
+  .summary-row{display:flex; justify-content:space-between; font-size:14px; padding:6px 0;}
+  .summary-total{display:flex; justify-content:space-between; font-weight:700; font-size:17px; padding-top:10px; border-top:1px solid var(--line); margin-top:8px;}
+  .submit-btn{
+    width:100%; background:var(--plum); color:#fff; border:none; border-radius:10px; padding:14px;
+    font-weight:700; font-size:15.5px; cursor:pointer;
+  }
+  .submit-btn:disabled{background:var(--ink-faint); cursor:not-allowed;}
+  .err{color:var(--red); font-size:13.5px; margin-bottom:12px; display:none;}
+  .back-link{font-size:13.5px; color:var(--ink-soft); text-decoration:none; display:inline-block; margin-bottom:14px;}
+</style>
+</head>
+<body>
+<header><div class="brand">Aurako Business</div></header>
+<main>
+  <a class="back-link" href="shop.html">← শপে ফিরে যান</a>
+  <h1>চেকআউট</h1>
+
+  <div class="card">
+    <label>নাম</label>
+    <input type="text" id="custName">
+    <label>ফোন নম্বর</label>
+    <input type="tel" id="custPhone" placeholder="01XXXXXXXXX">
+    <label>ঠিকানা</label>
+    <textarea id="custAddress"></textarea>
+  </div>
+
+  <div class="card">
+    <label>পেমেন্ট মেথড</label>
+    <div class="pay-options">
+      <div class="pay-opt active" data-method="cod">ক্যাশ অন ডেলিভারি</div>
+      <div class="pay-opt" data-method="bkash">বিকাশ</div>
+      <div class="pay-opt" data-method="nagad">নগদ</div>
+    </div>
+    <div class="txn-box" id="txnBox">
+      <div id="payInstruction"></div>
+      <label style="margin-top:10px;">ট্রানজেকশন আইডি</label>
+      <input type="text" id="txnId" placeholder="TrxID">
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="orderSummary"></div>
+    <div class="summary-total"><span>মোট</span><span id="orderTotal">৳0</span></div>
+  </div>
+
+  <div class="err" id="errMsg"></div>
+  <button class="submit-btn" id="submitBtn">অর্ডার কনফার্ম করুন</button>
+</main>
+
+<script>
+  const CART_KEY = "aurako:cart:v1";
+  let cart = [];
+  let method = "cod";
+
+  try{ cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]"); }catch(e){ cart = []; }
+  if(cart.length === 0){ window.location.href = "shop.html"; }
+
+  function money(n){ return "৳" + Number(n||0).toLocaleString("en-US"); }
+
+  function renderSummary(){
+    const wrap = document.getElementById("orderSummary");
+    wrap.innerHTML = cart.map(c => `<div class="summary-row"><span>${c.name} × ${c.qty}</span><span>${money(c.price*c.qty)}</span></div>`).join("");
+    const total = cart.reduce((s,c)=> s + c.qty*c.price, 0);
+    document.getElementById("orderTotal").textContent = money(total);
+    return total;
+  }
+  const total = renderSummary();
+
+  const instructions = {
+    bkash: "বিকাশ *247# / অ্যাপ থেকে <b>Send Money</b> করুন 01XXXXXXXXX নম্বরে (মার্চেন্ট নম্বর এখানে বসান), তারপর যে ট্রানজেকশন আইডি পাবেন সেটা নিচে লিখুন।",
+    nagad: "নগদ অ্যাপ/USSD থেকে <b>Send Money</b> করুন 01XXXXXXXXX নম্বরে, তারপর ট্রানজেকশন আইডি নিচে লিখুন।"
+  };
+
+  document.querySelectorAll(".pay-opt").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      document.querySelectorAll(".pay-opt").forEach(o=>o.classList.remove("active"));
+      el.classList.add("active");
+      method = el.dataset.method;
+      const box = document.getElementById("txnBox");
+      if(method === "bkash" || method === "nagad"){
+        box.classList.add("show");
+        document.getElementById("payInstruction").innerHTML = instructions[method];
+      }else{
+        box.classList.remove("show");
+      }
+    });
+  });
+
+  document.getElementById("submitBtn").addEventListener("click", async ()=>{
+    const errEl = document.getElementById("errMsg");
+    errEl.style.display = "none";
+    const customer_name = document.getElementById("custName").value.trim();
+    const phone = document.getElementById("custPhone").value.trim();
+    const address = document.getElementById("custAddress").value.trim();
+    const transaction_id = document.getElementById("txnId").value.trim();
+
+    if(!customer_name || !phone || !address){
+      errEl.textContent = "নাম, ফোন ও ঠিকানা দিন।"; errEl.style.display = "block"; return;
+    }
+    if((method === "bkash" || method === "nagad") && !transaction_id){
+      errEl.textContent = "অনলাইন পেমেন্টের জন্য ট্রানজেকশন আইডি দিন।"; errEl.style.display = "block"; return;
+    }
+
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true; btn.textContent = "অর্ডার হচ্ছে…";
+
+    try{
+      const payload = {
+        customer_name, phone, address,
+        items: cart.map(c=>({ id:c.id, name:c.name, price:c.price, qty:c.qty })),
+        total,
+        payment_method: method,
+        transaction_id
+      };
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error("order failed");
+      const data = await res.json();
+      localStorage.removeItem(CART_KEY);
+      window.location.href = "order-success.html?code=" + encodeURIComponent(data.order_code) + "&phone=" + encodeURIComponent(phone);
+    }catch(e){
+      errEl.textContent = "অর্ডার সাবমিট করা যায়নি, আবার চেষ্টা করুন।"; errEl.style.display = "block";
+      btn.disabled = false; btn.textContent = "অর্ডার কনফার্ম করুন";
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>অর্ডার সম্পন্ন — Aurako Business</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hind+Siliguri:wght@400;500;600;700&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF3EE; --surface:#FFFFFF; --ink:#2A1B1E; --ink-soft:#8A7370;
+    --plum:#6E2A3B; --plum-dark:#501F2C; --green:#3F7D58; --green-soft:#E7F1EA;
+    --line:#EADFDA; --radius:14px;
+    --shadow: 0 1px 2px rgba(42,27,30,0.04), 0 8px 24px -12px rgba(42,27,30,0.12);
+  }
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Hind Siliguri',sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh;}
+  .card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:36px; max-width:420px; text-align:center;}
+  .check{font-size:40px; color:var(--green); margin-bottom:10px;}
+  h1{font-family:'Fraunces',serif; font-size:22px; margin:0 0 8px;}
+  p{color:var(--ink-soft); font-size:14.5px; margin:0 0 18px;}
+  .code-box{
+    background:var(--green-soft); color:var(--plum-dark); font-family:'IBM Plex Mono',monospace;
+    font-weight:600; font-size:20px; padding:14px; border-radius:10px; margin-bottom:20px; letter-spacing:0.03em;
+  }
+  a.btn{
+    display:inline-block; background:var(--plum); color:#fff; text-decoration:none; padding:12px 22px;
+    border-radius:10px; font-weight:600; font-size:14.5px; margin:0 6px;
+  }
+  a.btn.secondary{background:transparent; color:var(--plum); border:1.5px solid var(--plum);}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="check">✓</div>
+    <h1>অর্ডার সফলভাবে সম্পন্ন হয়েছে</h1>
+    <p>আপনার অর্ডার কোডটি সংরক্ষণ করুন — স্ট্যাটাস জানতে এটা দরকার হবে</p>
+    <div class="code-box" id="orderCode">—</div>
+    <a class="btn" id="trackLink" href="#">অর্ডার ট্র্যাক করুন</a>
+    <a class="btn secondary" href="shop.html">শপিং চালিয়ে যান</a>
+  </div>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code") || "—";
+  const phone = params.get("phone") || "";
+  document.getElementById("orderCode").textContent = code;
+  document.getElementById("trackLink").href = "track.html?code=" + encodeURIComponent(code) + "&phone=" + encodeURIComponent(phone);
+</script>
+</body>
+</html>

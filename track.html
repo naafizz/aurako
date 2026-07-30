@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>অর্ডার ট্র্যাক করুন — Aurako Business</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hind+Siliguri:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF3EE; --surface:#FFFFFF; --ink:#2A1B1E; --ink-soft:#8A7370; --ink-faint:#B9A8A4;
+    --plum:#6E2A3B; --plum-dark:#501F2C; --gold:#B8862E; --gold-soft:#F2E4C7;
+    --green:#3F7D58; --green-soft:#E7F1EA; --red:#B23A48; --red-soft:#FBEAEC;
+    --line:#EADFDA; --radius:14px;
+    --shadow: 0 1px 2px rgba(42,27,30,0.04), 0 8px 24px -12px rgba(42,27,30,0.12);
+  }
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Hind Siliguri',sans-serif;}
+  header{padding:18px 28px; background:var(--surface); border-bottom:1px solid var(--line);}
+  .brand{font-family:'Fraunces',serif; font-weight:700; font-size:24px; color:var(--plum-dark);}
+  main{max-width:520px; margin:0 auto; padding:28px;}
+  h1{font-family:'Fraunces',serif; font-size:22px; margin:0 0 20px;}
+  .card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; margin-bottom:18px;}
+  label{display:block; font-size:13.5px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;}
+  input{width:100%; padding:11px 13px; border-radius:9px; border:1px solid var(--line); font-family:'Hind Siliguri',sans-serif; font-size:14.5px; margin-bottom:14px; background:#FBF6F3;}
+  .submit-btn{width:100%; background:var(--plum); color:#fff; border:none; border-radius:10px; padding:13px; font-weight:700; font-size:15px; cursor:pointer;}
+  .err{color:var(--red); font-size:13.5px; margin-top:8px; display:none;}
+  .status-badge{display:inline-block; padding:6px 14px; border-radius:999px; font-weight:700; font-size:13.5px;}
+  .status-pending{background:var(--gold-soft); color:var(--plum-dark);}
+  .status-confirmed{background:var(--green-soft); color:var(--green);}
+  .status-shipped{background:var(--green-soft); color:var(--green);}
+  .status-delivered{background:var(--green-soft); color:var(--green);}
+  .status-cancelled{background:var(--red-soft); color:var(--red);}
+  .row{display:flex; justify-content:space-between; font-size:14px; padding:6px 0;}
+  .item-row{display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0; color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<header><div class="brand">Aurako Business</div></header>
+<main>
+  <h1>অর্ডার ট্র্যাক করুন</h1>
+  <div class="card">
+    <label>অর্ডার কোড</label>
+    <input type="text" id="codeInput" placeholder="ARK-XXXXXX">
+    <label>ফোন নম্বর</label>
+    <input type="tel" id="phoneInput" placeholder="যে নম্বর দিয়ে অর্ডার করেছিলেন">
+    <button class="submit-btn" id="checkBtn">চেক করুন</button>
+    <div class="err" id="errMsg"></div>
+  </div>
+  <div class="card" id="resultCard" style="display:none;"></div>
+</main>
+<script>
+  const statusLabels = {
+    pending: "অপেক্ষমাণ", confirmed: "কনফার্ম হয়েছে", shipped: "পাঠানো হয়েছে",
+    delivered: "ডেলিভার হয়েছে", cancelled: "বাতিল হয়েছে"
+  };
+  function money(n){ return "৳" + Number(n||0).toLocaleString("en-US"); }
+
+  async function doCheck(){
+    const errEl = document.getElementById("errMsg");
+    const resCard = document.getElementById("resultCard");
+    errEl.style.display = "none";
+    resCard.style.display = "none";
+    const code = document.getElementById("codeInput").value.trim();
+    const phone = document.getElementById("phoneInput").value.trim();
+    if(!code || !phone){ errEl.textContent = "অর্ডার কোড ও ফোন নম্বর দিন।"; errEl.style.display = "block"; return; }
+    try{
+      const res = await fetch("/api/orders?code=" + encodeURIComponent(code) + "&phone=" + encodeURIComponent(phone));
+      if(!res.ok){ errEl.textContent = "এই তথ্য দিয়ে কোনো অর্ডার পাওয়া যায়নি।"; errEl.style.display = "block"; return; }
+      const o = await res.json();
+      let items = o.items;
+      if(typeof items === "string") items = JSON.parse(items);
+      resCard.innerHTML = `
+        <div class="row"><b>অর্ডার কোড</b><span>${o.order_code}</span></div>
+        <div class="row"><b>স্ট্যাটাস</b><span class="status-badge status-${o.status}">${statusLabels[o.status] || o.status}</span></div>
+        <hr style="border:none; border-top:1px solid var(--line); margin:10px 0;">
+        ${items.map(it => `<div class="item-row"><span>${it.name} × ${it.qty}</span><span>${money(it.price*it.qty)}</span></div>`).join("")}
+        <div class="row" style="font-weight:700; margin-top:8px;"><span>মোট</span><span>${money(o.total)}</span></div>
+      `;
+      resCard.style.display = "block";
+    }catch(e){
+      errEl.textContent = "একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।"; errEl.style.display = "block";
+    }
+  }
+
+  document.getElementById("checkBtn").addEventListener("click", doCheck);
+
+  const params = new URLSearchParams(window.location.search);
+  if(params.get("code")) document.getElementById("codeInput").value = params.get("code");
+  if(params.get("phone")) document.getElementById("phoneInput").value = params.get("phone");
+  if(params.get("code") && params.get("phone")) doCheck();
+</script>
+</body>
+</html>
